@@ -1,10 +1,10 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../utils/database');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('myrank')
-        .setDescription('Check your current rank in the club'),
+        .setDescription('Check your current rank and points'),
 
     async execute(interaction) {
         try {
@@ -19,23 +19,16 @@ module.exports = {
             const member = await db.getMember(userId);
             const rank = await db.getRankPosition(userId);
             const totalMembers = (await db.getStandings()).length;
-
-            if (!member) {
-                return interaction.editReply('❌ Unable to find your ranking information.');
-            }
-
-            const rankEmoji = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '📊';
             
-            const response = `${rankEmoji} **Hey ${interaction.user.username}!**\n\n` +
-                           `🏅 **Your Rank:** ${rank}/${totalMembers}\n` +
-                           `⭐ **Your Points:** ${member.points}\n\n` +
-                           `Keep up the great work! 🚀`;
+            // Simple response - just show rank
+            const response = `🏆 **Rank:** ${rank}/${totalMembers}\n` +
+                           `⭐ **Points:** ${member.points}`;
 
             await interaction.editReply(response);
 
         } catch (error) {
             console.error('Error in /myrank:', error);
-            await interaction.editReply('❌ An error occurred while checking your rank.');
+            await interaction.editReply('❌ Error checking rank.');
         }
     }
 };
