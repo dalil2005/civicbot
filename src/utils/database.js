@@ -4,7 +4,7 @@ const path = require('path');
 class Database {
     constructor() {
         this.db = new sqlite3.Database(path.join(__dirname, '../../points.db'), (err) => {
-            if (err) console.error('Database connection error:', err);
+            if (err) console.error('DB error:', err);
             else this.initDatabase();
         });
     }
@@ -20,7 +20,6 @@ class Database {
         `);
     }
 
-    // Add or update member
     async upsertMember(id, username) {
         return new Promise((resolve, reject) => {
             this.db.run(
@@ -32,7 +31,6 @@ class Database {
         });
     }
 
-    // Update points
     async updatePoints(userId, pointsChange) {
         return new Promise((resolve, reject) => {
             this.db.run(
@@ -47,7 +45,6 @@ class Database {
         });
     }
 
-    // Get member points
     async getMember(userId) {
         return new Promise((resolve, reject) => {
             this.db.get(
@@ -58,7 +55,6 @@ class Database {
         });
     }
 
-    // Get all members sorted by points
     async getStandings() {
         return new Promise((resolve, reject) => {
             this.db.all(
@@ -68,7 +64,6 @@ class Database {
         });
     }
 
-    // Get rank position
     async getRankPosition(userId) {
         return new Promise((resolve, reject) => {
             this.db.get(
