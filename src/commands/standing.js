@@ -4,12 +4,11 @@ const db = require('../utils/database');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('standing')
-        .setDescription('View the club ranking standings'),
+        .setDescription('View rankings'),
 
     async execute(interaction) {
         try {
             await interaction.deferReply();
-            
             const standings = await db.getStandings();
             
             if (standings.length === 0) {
@@ -18,7 +17,7 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor(0x0099FF)
-                .setTitle('🏆 Club Rankings')
+                .setTitle('🏆 Rankings')
                 .setTimestamp();
 
             let description = '';
@@ -32,12 +31,11 @@ module.exports = {
             }
 
             embed.setDescription(description);
-            
             await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('Error in /standing:', error);
-            await interaction.editReply('❌ Error fetching standings.');
+            console.error('Error:', error);
+            await interaction.editReply('❌ Error.');
         }
     }
 };
