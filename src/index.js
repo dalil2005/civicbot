@@ -27,15 +27,54 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
+// Auto-create Points Manager role for server owner
+async function setupPointsManagerRole(guild) {
+    try {
+        const roleName = 'Points Manager';
+        
+        // Find or create role
+        let pointsRole = guild.roles.cache.find(role => role.name === roleName);
+        
+        if (!pointsRole) {
+            pointsRole = await guild.roles.create({
+                name: roleName,
+                color: 0xFFD700, // Gold
+                reason: 'Auto-created by CivicBot',
+                permissions: []
+            });
+            console.log(`✅ Created role: ${roleName}`);
+        }
+        
+        // Give to server owner
+        const owner = await guild.fetchOwner();
+        
+        if (!owner.roles.cache.has(pointsRole.id)) {
+            await owner.roles.add(pointsRole);
+            console.log(`✅ Assigned role to owner: ${owner.user.tag}`);
+        }
+        
+        return pointsRole.id;
+        
+    } catch (error) {
+        console.error('Error setting up role:', error);
+        return null;
+    }
+}
+
 // Bot ready event
 client.once(Events.ClientReady, async () => {
     console.log(`✅ CivicBot logged in as ${client.user.tag}`);
+    
+    // Setup Points Manager role in all servers
+    client.guilds.cache.forEach(async (guild) => {
+        await setupPointsManagerRole(guild);
+    });
     
     // Register slash commands
     try {
         const commands = Array.from(client.commands.values()).map(cmd => cmd.data.toJSON());
         await client.application.commands.set(commands);
-        console.log('✅ Slash commands registered globally');
+        console.log('✅ Slash commands registered');
     } catch (error) {
         console.error('Error registering commands:', error);
     }
@@ -53,7 +92,7 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error(`Error executing ${interaction.commandName}:`, error);
         await interaction.reply({ 
-            content: '❌ There was an error executing this command!', 
+            content: '❌ Error executing command!', 
             ephemeral: true 
         });
     }
@@ -64,7 +103,7 @@ client.on(Events.MessageCreate, async message => {
     // Ignore bot messages
     if (message.author.bot) return;
     
-    // Check for points addition/removal format: @User +1 or @User -2
+    // Check for points format: @User +1 or @User -2
     const pointsRegex = /<@!?(\d+)>\s*([+-]\d+)/;
     const match = message.content.match(pointsRegex);
     
@@ -72,15 +111,17 @@ client.on(Events.MessageCreate, async message => {
         const targetUserId = match[1];
         const pointsChange = parseInt(match[2]);
         
-        // Check permissions
-        const pointsManagerRole = process.env.POINTS_MANAGER_ROLE || 'Points Manager';
-        const hasPermission = message.member.roles.cache.some(role => 
-            role.name === pointsManagerRole
+        // Check if user has Points Manager role
+        const hasPointsManagerRole = message.member.roles.cache.some(role => 
+            role.name === 'Points Manager'
         );
-
-        if (!hasPermission) {
+        
+        // Allow server owner even without role
+        const isServerOwner = message.author.id === message.guild.ownerId;
+        
+        if (!hasPointsManagerRole && !isServerOwner) {
             return message.reply({
-                content: `❌ You need the "${pointsManagerRole}" role to manage points.`,
+                content: `❌ You need the "Points Manager" role to manage points.`,
                 allowedMentions: { repliedUser: false }
             });
         }
@@ -111,7 +152,7 @@ client.on(Events.MessageCreate, async message => {
                 
                 await message.reply({ embeds: [embed] });
             } else {
-                await message.reply('❌ Unable to update points. User may not exist in database.');
+                await message.reply('❌ Unable to update points.');
             }
             
         } catch (error) {
@@ -125,6 +166,14 @@ client.on(Events.MessageCreate, async message => {
 client.on(Events.Error, error => {
     console.error('Discord client error:', error);
 });
+
+// Keep-alive for hosting
+const http = require('http');
+const server = http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end('CivicBot is online!');
+});
+server.listen(3000);
 
 process.on('SIGINT', () => {
     console.log('Shutting down CivicBot...');
